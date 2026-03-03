@@ -2,27 +2,37 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, HTTPException
 
 from live_action.config import AppConfig
 from live_action.logging_utils import configure_logging, log_event
+from live_action.server.orchestrator import Orchestrator
 from live_action.server.queue import JobQueue
-from live_action.server.schemas import IngestRequest, IngestResponse, JobStatusResponse
+from live_action.server.schemas import (
+    IngestRequest,
+    IngestResponse,
+    JobStatusResponse,
+    PipelineRunResponse,
+)
 
 logger = logging.getLogger("live_action.server")
 config = AppConfig()
 job_queue = JobQueue(max_pending_jobs=config.queue.max_pending_jobs)
+orchestrator = Orchestrator(config)
 
 
 async def _worker_loop() -> None:
     while True:
         job = await job_queue.next_job()
         try:
-            await asyncio.sleep(0.05)
+            run_id = job.run_id
+            if run_id is None:
+                raise RuntimeError(f"Missing run_id for job {job.id}")
+            await orchestrator.process_run(run_id)
             job_queue.complete(job.id)
-            log_event(logger, "queue.job.completed", {"job_id": job.id})
+            log_event(logger, "queue.job.completed", {"job_id": job.id, "run_id": run_id})
         except Exception as exc:  # pragma: no cover
             job_queue.fail(job.id, str(exc))
             log_event(logger, "queue.job.failed", {"job_id": job.id, "error": str(exc)})
@@ -36,16 +46,8 @@ async def lifespan(_: FastAPI):
         yield
     finally:
         worker_task.cancel()
-        with contextlib_suppress(asyncio.CancelledError):
+        with suppress(asyncio.CancelledError):
             await worker_task
-
-
-@asynccontextmanager
-async def contextlib_suppress(*exceptions: type[BaseException]):
-    try:
-        yield
-    except exceptions:
-        return
 
 
 app = FastAPI(title="live-action", version="0.1.0", lifespan=lifespan)
@@ -58,9 +60,15 @@ async def health() -> dict[str, str]:
 
 @app.post("/jobs", response_model=IngestResponse)
 async def create_job(req: IngestRequest) -> IngestResponse:
+    run = orchestrator.create_run(input_path=req.input_path, config_payload=req.config)
     job = await job_queue.enqueue(payload=req.model_dump())
-    log_event(logger, "queue.job.enqueued", {"job_id": job.id, "input_path": req.input_path})
-    return IngestResponse(job_id=job.id, status=job.status)
+    job.run_id = run.run_id
+    log_event(
+        logger,
+        "queue.job.enqueued",
+        {"job_id": job.id, "run_id": run.run_id, "input_path": req.input_path},
+    )
+    return IngestResponse(job_id=job.id, run_id=run.run_id, status=job.status)
 
 
 @app.get("/jobs/{job_id}", response_model=JobStatusResponse)
@@ -68,5 +76,38 @@ async def get_job(job_id: str) -> JobStatusResponse:
     job = job_queue.get(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
-    return JobStatusResponse(job_id=job.id, status=job.status, error=job.error)
+    return JobStatusResponse(job_id=job.id, run_id=job.run_id, status=job.status, error=job.error)
+
+
+@app.get("/runs", response_model=list[PipelineRunResponse])
+async def list_runs() -> list[PipelineRunResponse]:
+    runs = orchestrator.list_runs()
+    responses: list[PipelineRunResponse] = []
+    for run in runs:
+        responses.append(
+            PipelineRunResponse(
+                run_id=run.run_id,
+                input_path=run.input_path,
+                created_at=run.created_at,
+                updated_at=run.updated_at,
+                status=run.status,
+                chunks=run.chunks,
+            )
+        )
+    return responses
+
+
+@app.get("/runs/{run_id}", response_model=PipelineRunResponse)
+async def get_run(run_id: str) -> PipelineRunResponse:
+    run = orchestrator.get_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+    return PipelineRunResponse(
+        run_id=run.run_id,
+        input_path=run.input_path,
+        created_at=run.created_at,
+        updated_at=run.updated_at,
+        status=run.status,
+        chunks=run.chunks,
+    )
 

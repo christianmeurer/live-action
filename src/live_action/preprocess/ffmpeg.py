@@ -11,6 +11,10 @@ class FFmpegUnavailableError(RuntimeError):
     pass
 
 
+class FFmpegCommandError(RuntimeError):
+    pass
+
+
 def ensure_ffmpeg() -> None:
     if shutil.which("ffmpeg") is None:
         raise FFmpegUnavailableError("ffmpeg executable not found in PATH")
@@ -30,7 +34,7 @@ def inspect_video(input_path: Path) -> dict[str, Any]:
         "-show_format",
         str(input_path),
     ]
-    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    result = _run_command(cmd, capture_output=True)
     return json.loads(result.stdout)
 
 
@@ -52,7 +56,7 @@ def normalize_video(input_path: Path, output_path: Path, fps: int, height: int) 
         "yuv420p",
         str(output_path),
     ]
-    subprocess.run(cmd, check=True)
+    _run_command(cmd)
 
 
 def extract_audio_wav(input_path: Path, output_path: Path) -> None:
@@ -72,5 +76,45 @@ def extract_audio_wav(input_path: Path, output_path: Path) -> None:
         "2",
         str(output_path),
     ]
-    subprocess.run(cmd, check=True)
+    _run_command(cmd)
+
+
+def extract_subclip(input_path: Path, output_path: Path, start_seconds: float, duration_seconds: float) -> None:
+    ensure_ffmpeg()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    cmd: list[str] = [
+        "ffmpeg",
+        "-y",
+        "-ss",
+        f"{start_seconds:.6f}",
+        "-i",
+        str(input_path),
+        "-t",
+        f"{duration_seconds:.6f}",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-an",
+        str(output_path),
+    ]
+    _run_command(cmd)
+
+
+def _run_command(cmd: list[str], capture_output: bool = False) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            cmd,
+            check=True,
+            text=True,
+            capture_output=capture_output,
+        )
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr or ""
+        stdout = exc.stdout or ""
+        message = (
+            "FFmpeg command failed. "
+            f"command={' '.join(cmd)} stdout={stdout.strip()} stderr={stderr.strip()}"
+        )
+        raise FFmpegCommandError(message) from exc
 

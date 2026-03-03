@@ -21,6 +21,7 @@ class Job:
     id: str = field(default_factory=lambda: str(uuid4()))
     created_at: str = field(default_factory=lambda: datetime.now(tz=UTC).isoformat())
     status: JobStatus = JobStatus.QUEUED
+    run_id: str | None = None
     error: str | None = None
 
 

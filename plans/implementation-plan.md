@@ -133,3 +133,25 @@ After scaffold + Roo config land in the working tree:
 - repo is pushed to a private GitHub repository named `live-action`
 - documented run path for: preprocess ➜ translate ➜ upscale ➜ remux ➜ QA
 
+## 6) Milestone 2 implementation status
+
+Implemented in codebase:
+
+- Pipeline runtime config contracts in `src/live_action/pipeline/config.py`
+- Chunk planning and overlap blending helpers in `src/live_action/pipeline/chunking.py`
+- Translation provider abstraction + fallback path in `src/live_action/pipeline/translator.py`
+- Upscale stage contract in `src/live_action/pipeline/upscale.py`
+- GPU boundary hooks in `src/live_action/runtime/gpu.py`
+- Evaluation metrics + requeue policy in:
+  - `src/live_action/eval/metrics.py`
+  - `src/live_action/eval/requeue.py`
+- Deterministic orchestrator state machine in `src/live_action/server/orchestrator.py`
+- API extensions for run/chunk visibility in `src/live_action/server/main.py`
+- API schema expansion in `src/live_action/server/schemas.py`
+- Tests added in `tests/` and runtime checks in `scripts/`
+
+Validation snapshot:
+
+- `python -m compileall src tests scripts` passes.
+- `pytest -q` passes.
+

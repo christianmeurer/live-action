@@ -1,0 +1,61 @@
+from __future__ import annotations
+
+from enum import StrEnum
+
+from pydantic import BaseModel, Field, model_validator
+
+
+class Precision(StrEnum):
+    BF16 = "bf16"
+    FP8_E4M3FN = "fp8_e4m3fn"
+
+
+class ProviderName(StrEnum):
+    WAN_DITTO = "wan2.1-ditto"
+    HUNYUAN = "hunyuan-video-1.5"
+
+
+class RetryPolicy(BaseModel):
+    max_retries: int = Field(default=2, ge=0, le=10)
+    denoise_backoff: float = Field(default=0.05, gt=0.0, le=0.3)
+
+
+class ChunkingConfig(BaseModel):
+    chunk_seconds: float = Field(default=5.0, gt=0.2, le=60.0)
+    overlap_ratio: float = Field(default=0.25, ge=0.0, lt=0.95)
+    target_fps: int = Field(default=24, ge=1, le=120)
+
+
+class TranslationConfig(BaseModel):
+    primary_provider: ProviderName = ProviderName.WAN_DITTO
+    fallback_provider: ProviderName | None = ProviderName.HUNYUAN
+    precision: Precision = Precision.BF16
+    denoise_strength: float = Field(default=0.8, ge=0.0, le=1.0)
+    guidance_scale: float = Field(default=7.0, ge=1.0, le=30.0)
+    seed: int = Field(default=1234, ge=0)
+    retry: RetryPolicy = Field(default_factory=RetryPolicy)
+
+
+class UpscaleConfig(BaseModel):
+    enabled: bool = True
+    model_name: str = "seedvr2"
+    target_height: int = Field(default=1080, ge=256, le=4320)
+
+
+class EvalConfig(BaseModel):
+    enabled: bool = True
+    structural_similarity_threshold: float = Field(default=0.90, ge=0.0, le=1.0)
+
+
+class PipelineRunConfig(BaseModel):
+    chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
+    translation: TranslationConfig = Field(default_factory=TranslationConfig)
+    upscale: UpscaleConfig = Field(default_factory=UpscaleConfig)
+    evaluation: EvalConfig = Field(default_factory=EvalConfig)
+
+    @model_validator(mode="after")
+    def _validate_fallback(self) -> "PipelineRunConfig":
+        if self.translation.fallback_provider == self.translation.primary_provider:
+            self.translation.fallback_provider = None
+        return self
+
