@@ -21,6 +21,7 @@ from live_action.preprocess.ffmpeg import (
     remux_audio,
 )
 from live_action.runtime.gpu import GpuRuntime
+from live_action.server.store import FileStore
 
 
 @dataclass
@@ -58,6 +59,7 @@ class Orchestrator:
         self._translator = TranslationService()
         self._upscaler = UpscaleService()
         self._gpu_runtime = GpuRuntime()
+        self._store = FileStore(self._app_config.paths.artifacts_dir)
 
     def create_run(
         self,
@@ -234,10 +236,8 @@ class Orchestrator:
             self._write_run_report(run)
 
     def _write_run_report(self, run: PipelineRunRecord) -> None:
-        run_dir = self._app_config.paths.artifacts_dir / "runs" / run.run_id
-        run_dir.mkdir(parents=True, exist_ok=True)
-        report_path = run_dir / "run-report.json"
-        report_path.write_text(json.dumps(self._serialize_run(run), indent=2), encoding="utf-8")
+        payload = self._serialize_run(run)
+        self._store.save_json(f"runs/{run.run_id}/run-report.json", payload)
 
     @staticmethod
     def _serialize_run(run: PipelineRunRecord) -> dict[str, object]:

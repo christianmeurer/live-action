@@ -6,8 +6,12 @@ services:
     container_name: live-action
     ports:
       - "8000:8000"
+    environment:
+      - LIVE_ACTION_API_KEY=${LIVE_ACTION_API_KEY:-}
+      - LIVE_ACTION_PRECISION=${LIVE_ACTION_PRECISION:-bf16}
     volumes:
       - ./:/workspace
+    restart: unless-stopped
     deploy:
       resources:
         reservations:

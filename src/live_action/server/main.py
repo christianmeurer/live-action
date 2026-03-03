@@ -3,11 +3,14 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 
 from live_action.config import AppConfig
 from live_action.logging_utils import configure_logging, log_event
+from live_action.observability.metrics import MetricsRegistry
+from live_action.server.auth import require_api_key
 from live_action.server.orchestrator import Orchestrator
 from live_action.server.queue import JobQueue
 from live_action.server.schemas import (
@@ -16,31 +19,38 @@ from live_action.server.schemas import (
     JobStatusResponse,
     PipelineRunResponse,
 )
+from live_action.server.startup import run_startup_checks
 
 logger = logging.getLogger("live_action.server")
 config = AppConfig()
 job_queue = JobQueue(max_pending_jobs=config.queue.max_pending_jobs)
 orchestrator = Orchestrator(config)
+metrics = MetricsRegistry()
+ApiKeyDep = Annotated[None, Depends(require_api_key)]
 
 
 async def _worker_loop() -> None:
     while True:
         job = await job_queue.next_job()
+        timer = metrics.timer()
         try:
             run_id = job.run_id
             if run_id is None:
                 raise RuntimeError(f"Missing run_id for job {job.id}")
             await orchestrator.process_run(run_id)
             job_queue.complete(job.id)
+            metrics.inc_completed(timer.elapsed_ms)
             log_event(logger, "queue.job.completed", {"job_id": job.id, "run_id": run_id})
         except Exception as exc:  # pragma: no cover
             job_queue.fail(job.id, str(exc))
+            metrics.inc_failed(timer.elapsed_ms)
             log_event(logger, "queue.job.failed", {"job_id": job.id, "error": str(exc)})
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     configure_logging()
+    run_startup_checks(config)
     worker_task = asyncio.create_task(_worker_loop(), name="live-action-worker")
     try:
         yield
@@ -58,8 +68,19 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/metrics")
+async def get_metrics(_: ApiKeyDep) -> dict[str, int]:
+    snap = metrics.snapshot()
+    return {
+        "jobs_enqueued": snap.jobs_enqueued,
+        "jobs_completed": snap.jobs_completed,
+        "jobs_failed": snap.jobs_failed,
+        "total_processing_ms": snap.total_processing_ms,
+    }
+
+
 @app.post("/jobs", response_model=IngestResponse)
-async def create_job(req: IngestRequest) -> IngestResponse:
+async def create_job(req: IngestRequest, _: ApiKeyDep) -> IngestResponse:
     if req.request_id is not None:
         existing = orchestrator.get_run_by_request_id(req.request_id)
         if existing is not None:
@@ -78,6 +99,7 @@ async def create_job(req: IngestRequest) -> IngestResponse:
         request_id=req.request_id,
     )
     job = await job_queue.enqueue(payload=req.model_dump())
+    metrics.inc_enqueued()
     job.run_id = run.run_id
     log_event(
         logger,
@@ -88,7 +110,7 @@ async def create_job(req: IngestRequest) -> IngestResponse:
 
 
 @app.get("/jobs/{job_id}", response_model=JobStatusResponse)
-async def get_job(job_id: str) -> JobStatusResponse:
+async def get_job(job_id: str, _: ApiKeyDep) -> JobStatusResponse:
     job = job_queue.get(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
@@ -96,7 +118,7 @@ async def get_job(job_id: str) -> JobStatusResponse:
 
 
 @app.get("/runs", response_model=list[PipelineRunResponse])
-async def list_runs() -> list[PipelineRunResponse]:
+async def list_runs(_: ApiKeyDep) -> list[PipelineRunResponse]:
     runs = orchestrator.list_runs()
     responses: list[PipelineRunResponse] = []
     for run in runs:
@@ -116,7 +138,7 @@ async def list_runs() -> list[PipelineRunResponse]:
 
 
 @app.get("/runs/{run_id}", response_model=PipelineRunResponse)
-async def get_run(run_id: str) -> PipelineRunResponse:
+async def get_run(run_id: str, _: ApiKeyDep) -> PipelineRunResponse:
     run = orchestrator.get_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-import subprocess
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
+from live_action.adapters.command import render_command, run_command
 from live_action.pipeline.config import ExecutionMode, PipelineRunConfig, ProviderName
 
 
@@ -56,7 +56,7 @@ class CommandTemplateProvider(TranslationProvider):
                 "provider": self.name.value,
             },
         )
-        _run_command(command)
+        run_command(command, stage="translation")
         metadata_path = output_path.with_suffix(".translation.json")
         metadata = {
             "provider": self.name.value,
@@ -147,21 +147,5 @@ class TranslationService:
 
 
 def _render_command(template: list[str], variables: dict[str, str]) -> list[str]:
-    rendered: list[str] = []
-    for token in template:
-        rendered_token = token
-        for key, value in variables.items():
-            rendered_token = rendered_token.replace(f"{{{key}}}", value)
-        rendered.append(rendered_token)
-    return rendered
-
-
-def _run_command(command: list[str]) -> None:
-    try:
-        subprocess.run(command, check=True, text=True, capture_output=True)
-    except subprocess.CalledProcessError as exc:
-        stderr = exc.stderr or ""
-        stdout = exc.stdout or ""
-        msg = f"Translation command failed: {' '.join(command)} stdout={stdout.strip()} stderr={stderr.strip()}"
-        raise RuntimeError(msg) from exc
+    return render_command(template, variables)
 
