@@ -1,0 +1,32 @@
+[project]
+name = "live-action"
+version = "0.1.0"
+description = "Automated animation-to-live-action pipeline scaffold"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "fastapi>=0.116.0,<0.117.0",
+  "pydantic>=2.11.0,<3.0.0",
+  "pydantic-settings>=2.10.0,<3.0.0",
+  "typer>=0.16.0,<0.17.0",
+  "uvicorn[standard]>=0.35.0,<0.36.0",
+]
+
+[project.scripts]
+live-action = "live_action.cli:app"
+
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+lint.select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+lint.ignore = []
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_configs = true
+

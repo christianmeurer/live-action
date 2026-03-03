@@ -1,0 +1,6 @@
+Ask mode project directives:
+
+- Provide concise, operational, and reproducible guidance.
+- Prefer exact commands and file-level actions over abstract advice.
+- Keep recommendations aligned with single-GPU serialized execution.
+

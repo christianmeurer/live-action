@@ -1,0 +1,8 @@
+Code mode project directives:
+
+- Implement small, testable modules with typed signatures.
+- Add structured logs and JSON metadata outputs for pipeline stages.
+- Validate ffmpeg/ffprobe availability before preprocess execution.
+- Use clear exception messages with remediation hints.
+- Avoid hidden retries; retries must be explicit and observable.
+

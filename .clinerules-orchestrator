@@ -1,0 +1,6 @@
+Orchestrator mode project directives:
+
+- Maintain milestone checklist and explicit handoff criteria.
+- Delegate implementation to specialized modes where possible.
+- Disallow parallel heavy GPU tasks and enforce serialized execution.
+

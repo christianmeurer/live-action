@@ -1,0 +1,6 @@
+GPU Ops mode project directives:
+
+- Optimize memory and latency under H100 80GB assumptions.
+- Prefer kernel/precision paths compatible with deterministic operation.
+- Record test matrix: model, precision, resolution, frames, runtime settings.
+

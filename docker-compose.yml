@@ -1,0 +1,18 @@
+services:
+  live-action:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: live-action
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/workspace
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+

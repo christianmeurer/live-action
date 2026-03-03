@@ -1,0 +1,6 @@
+Eval mode project directives:
+
+- Evaluate temporal consistency and structural preservation per chunk.
+- Output JSON reports with thresholds, scores, and pass/fail decisions.
+- Requeue policy must specify bounded retries and parameter deltas.
+

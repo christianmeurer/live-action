@@ -1,0 +1,18 @@
+Project scope: Automated animation-to-live-action pipeline.
+
+Global constraints:
+- Single GPU execution semantics for heavy model stages.
+- Deterministic run metadata must be generated per stage.
+- Use uv for dependency management.
+- Prefer Python 3.11 and typed interfaces.
+
+Memory and precision policy:
+- Default to bf16/fp8-compatible pathways where applicable.
+- Add explicit memory cleanup boundaries between heavy stages.
+- Treat OOM as retriable with controlled parameter backoff.
+
+Implementation policy:
+- Build in milestones; each milestone must be runnable.
+- Keep preprocessing, translation, refinement, and QA as separable modules.
+- Use explicit config objects for tunables instead of hard-coded literals.
+

@@ -1,0 +1,29 @@
+Pipeline-specific constraints for animation-to-live-action translation:
+
+- Treat the system as a three-layer pipeline:
+  1) Preprocess (fps normalization, scaling, audio split)
+  2) Translate (video-to-video generation)
+  3) Refine (upscale, smoothing, remux, QA)
+
+- All processing steps must record deterministic metadata:
+  - input paths
+  - output paths
+  - seed values
+  - model/runtime config
+  - timing
+
+- For clip segmentation:
+  - use explicit chunk boundaries
+  - include overlap percentage in metadata
+  - record stitch strategy used
+
+- For retries and failures:
+  - classify failure type (OOM, runtime, validation)
+  - store retry count and parameter deltas
+  - never silently continue after critical stage failures
+
+- Prefer safety defaults:
+  - no concurrent heavy video jobs
+  - fail fast on missing ffmpeg/ffprobe
+  - validate input file existence and extension before work starts
+

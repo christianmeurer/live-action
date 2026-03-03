@@ -1,0 +1,7 @@
+Architect mode project directives:
+
+- Define acceptance criteria and testability before coding.
+- Every architecture decision must include resource assumptions.
+- Force single-GPU queue design for all serving proposals.
+- Explicitly separate Milestone 1 (no inference) from later model integration.
+

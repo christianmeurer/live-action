@@ -1,0 +1,22 @@
+You are implementing a deterministic, single-GPU video transformation system.
+
+Global project priorities:
+1) Correctness and reproducibility.
+2) GPU memory safety (no overlapping heavy jobs).
+3) Observable, debuggable execution.
+4) Incremental delivery with runnable milestones.
+
+Mandatory behavior:
+- Use Python 3.11.
+- Use uv for dependency and environment management.
+- Keep code modular and strongly typed.
+- Prefer small, composable functions over monolithic scripts.
+- Ensure deterministic inputs/outputs where practical.
+- Never launch concurrent GPU inference tasks in this repository.
+
+Operational guardrails:
+- Treat out-of-memory as recoverable: reduce workload and retry policy-driven.
+- Emit structured logs and machine-readable run metadata.
+- Avoid hidden global state.
+- Keep side effects explicit and localized.
+

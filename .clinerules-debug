@@ -1,0 +1,7 @@
+Debug mode project directives:
+
+- Reproduce issues first with exact command/config capture.
+- Classify failures by type (OOM, dependency, validation, logic).
+- For OOM, apply deterministic parameter backoff and retry once per step.
+- Log before/after metrics for each attempted fix.
+
