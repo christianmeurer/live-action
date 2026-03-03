@@ -60,6 +60,7 @@ class Orchestrator:
         self._upscaler = UpscaleService()
         self._gpu_runtime = GpuRuntime()
         self._store = FileStore(self._app_config.paths.artifacts_dir)
+        self._load_existing_runs()
 
     def create_run(
         self,
@@ -238,6 +239,57 @@ class Orchestrator:
     def _write_run_report(self, run: PipelineRunRecord) -> None:
         payload = self._serialize_run(run)
         self._store.save_json(f"runs/{run.run_id}/run-report.json", payload)
+
+    def _load_existing_runs(self) -> None:
+        report_files = self._store.glob("runs/*/run-report.json")
+        for report_file in report_files:
+            relative = report_file.relative_to(self._app_config.paths.artifacts_dir)
+            payload = self._store.load_json(str(relative))
+            if payload is None:
+                continue
+
+            run = self._deserialize_run(payload)
+            self._runs[run.run_id] = run
+            if run.request_id is not None:
+                self._request_to_run[run.request_id] = run.run_id
+
+    @staticmethod
+    def _deserialize_run(payload: dict[str, object]) -> PipelineRunRecord:
+        chunks_payload = payload.get("chunks", [])
+        chunks: list[ChunkRunRecord] = []
+        for entry in chunks_payload:
+            if not isinstance(entry, dict):
+                continue
+            chunks.append(
+                ChunkRunRecord(
+                    chunk_index=int(entry.get("chunk_index", 0)),
+                    start_seconds=float(entry.get("start_seconds", 0.0)),
+                    end_seconds=float(entry.get("end_seconds", 0.0)),
+                    attempt=int(entry.get("attempt", 0)),
+                    status=str(entry.get("status", "queued")),
+                    score=float(entry["score"]) if entry.get("score") is not None else None,
+                    provider=str(entry["provider"]) if entry.get("provider") is not None else None,
+                    translated_path=(
+                        str(entry["translated_path"]) if entry.get("translated_path") is not None else None
+                    ),
+                    upscaled_path=str(entry["upscaled_path"]) if entry.get("upscaled_path") is not None else None,
+                    error=str(entry["error"]) if entry.get("error") is not None else None,
+                )
+            )
+
+        return PipelineRunRecord(
+            run_id=str(payload.get("run_id", "")),
+            request_id=str(payload["request_id"]) if payload.get("request_id") is not None else None,
+            input_path=str(payload.get("input_path", "")),
+            created_at=str(payload.get("created_at", "")),
+            updated_at=str(payload.get("updated_at", "")),
+            status=str(payload.get("status", "queued")),
+            config=dict(payload.get("config", {})),
+            final_output_path=(
+                str(payload["final_output_path"]) if payload.get("final_output_path") is not None else None
+            ),
+            chunks=chunks,
+        )
 
     @staticmethod
     def _serialize_run(run: PipelineRunRecord) -> dict[str, object]:

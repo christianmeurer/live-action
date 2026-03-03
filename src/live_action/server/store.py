@@ -22,3 +22,6 @@ class FileStore:
             return None
         return json.loads(target.read_text(encoding="utf-8"))
 
+    def glob(self, pattern: str) -> list[Path]:
+        return sorted(self._root.glob(pattern))
+
