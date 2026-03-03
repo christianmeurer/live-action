@@ -16,14 +16,26 @@ class SimilarityResult:
 
 
 def compute_structural_similarity(
-    *, source_video_path: Path, generated_video_path: Path, threshold: float
+    *, source_video_path: Path, generated_video_path: Path, threshold: float, backend: str = "metadata-cosine"
 ) -> SimilarityResult:
+    if backend == "clip":
+        try:
+            return _compute_clip_similarity(
+                source_video_path=source_video_path,
+                generated_video_path=generated_video_path,
+                threshold=threshold,
+            )
+        except Exception:
+            # Deterministic fallback for environments without CLIP dependencies.
+            pass
+
     source_meta = inspect_video(source_video_path)
     generated_meta = inspect_video(generated_video_path)
     source_vec = _vectorize(source_meta)
     generated_vec = _vectorize(generated_meta)
     score = _cosine_similarity(source_vec, generated_vec)
     details: dict[str, Any] = {
+        "backend": "metadata-cosine",
         "threshold": threshold,
         "source_duration": source_meta.get("format", {}).get("duration"),
         "generated_duration": generated_meta.get("format", {}).get("duration"),
@@ -31,7 +43,7 @@ def compute_structural_similarity(
     return SimilarityResult(score=score, passed=score >= threshold, details=details)
 
 
-def _vectorize(meta: dict[str, Any]) -> np.ndarray:
+def _vectorize(meta: dict[str, Any]) -> list[float]:
     streams = meta.get("streams", [])
     video_stream = next((s for s in streams if s.get("codec_type") == "video"), {})
     width = float(video_stream.get("width", 0))
@@ -59,4 +71,22 @@ def _cosine_similarity(a: list[float], b: list[float]) -> float:
         return 0.0
     dot = sum(av * bv for av, bv in zip(a, b, strict=True))
     return float(dot / (a_norm * b_norm))
+
+
+def _compute_clip_similarity(
+    *, source_video_path: Path, generated_video_path: Path, threshold: float
+) -> SimilarityResult:
+    # Placeholder integration point for a CLIP-based embedding backend.
+    # This method currently computes a deterministic synthetic score from metadata
+    # to keep behavior stable in environments where CLIP isn't installed.
+    source_meta = inspect_video(source_video_path)
+    generated_meta = inspect_video(generated_video_path)
+    source_vec = _vectorize(source_meta)
+    generated_vec = _vectorize(generated_meta)
+    score = _cosine_similarity(source_vec, generated_vec)
+    details: dict[str, Any] = {
+        "backend": "clip-fallback",
+        "threshold": threshold,
+    }
+    return SimilarityResult(score=score, passed=score >= threshold, details=details)
 

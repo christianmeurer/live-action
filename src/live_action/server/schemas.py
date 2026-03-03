@@ -9,6 +9,7 @@ from live_action.server.queue import JobStatus
 
 
 class IngestRequest(BaseModel):
+    request_id: str | None = None
     input_path: str = Field(min_length=1)
     config: dict[str, object] = Field(default_factory=dict)
 
@@ -23,6 +24,7 @@ class IngestRequest(BaseModel):
 class IngestResponse(BaseModel):
     job_id: str
     run_id: str
+    request_id: str | None = None
     status: JobStatus
 
 
@@ -48,9 +50,11 @@ class ChunkStatusResponse(BaseModel):
 
 class PipelineRunResponse(BaseModel):
     run_id: str
+    request_id: str | None = None
     input_path: str
     created_at: str
     updated_at: str
     status: str
+    final_output_path: str | None = None
     chunks: list[ChunkStatusResponse] = Field(default_factory=list)
 

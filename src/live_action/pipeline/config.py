@@ -15,6 +15,11 @@ class ProviderName(StrEnum):
     HUNYUAN = "hunyuan-video-1.5"
 
 
+class ExecutionMode(StrEnum):
+    DRY_RUN = "dry-run"
+    COMMAND = "command"
+
+
 class RetryPolicy(BaseModel):
     max_retries: int = Field(default=2, ge=0, le=10)
     denoise_backoff: float = Field(default=0.05, gt=0.0, le=0.3)
@@ -29,6 +34,8 @@ class ChunkingConfig(BaseModel):
 class TranslationConfig(BaseModel):
     primary_provider: ProviderName = ProviderName.WAN_DITTO
     fallback_provider: ProviderName | None = ProviderName.HUNYUAN
+    execution_mode: ExecutionMode = ExecutionMode.DRY_RUN
+    command_template: list[str] | None = None
     precision: Precision = Precision.BF16
     denoise_strength: float = Field(default=0.8, ge=0.0, le=1.0)
     guidance_scale: float = Field(default=7.0, ge=1.0, le=30.0)
@@ -39,11 +46,14 @@ class TranslationConfig(BaseModel):
 class UpscaleConfig(BaseModel):
     enabled: bool = True
     model_name: str = "seedvr2"
+    execution_mode: ExecutionMode = ExecutionMode.DRY_RUN
+    command_template: list[str] | None = None
     target_height: int = Field(default=1080, ge=256, le=4320)
 
 
 class EvalConfig(BaseModel):
     enabled: bool = True
+    backend: str = "metadata-cosine"
     structural_similarity_threshold: float = Field(default=0.90, ge=0.0, le=1.0)
 
 
@@ -57,5 +67,13 @@ class PipelineRunConfig(BaseModel):
     def _validate_fallback(self) -> "PipelineRunConfig":
         if self.translation.fallback_provider == self.translation.primary_provider:
             self.translation.fallback_provider = None
+        if self.translation.execution_mode == ExecutionMode.COMMAND and not self.translation.command_template:
+            raise ValueError("translation.command_template is required when execution_mode=command")
+        if (
+            self.upscale.enabled
+            and self.upscale.execution_mode == ExecutionMode.COMMAND
+            and not self.upscale.command_template
+        ):
+            raise ValueError("upscale.command_template is required when execution_mode=command")
         return self
 

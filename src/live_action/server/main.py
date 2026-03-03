@@ -60,7 +60,23 @@ async def health() -> dict[str, str]:
 
 @app.post("/jobs", response_model=IngestResponse)
 async def create_job(req: IngestRequest) -> IngestResponse:
-    run = orchestrator.create_run(input_path=req.input_path, config_payload=req.config)
+    if req.request_id is not None:
+        existing = orchestrator.get_run_by_request_id(req.request_id)
+        if existing is not None:
+            for existing_job in job_queue.find_by_run_id(existing.run_id):
+                if existing_job is not None:
+                    return IngestResponse(
+                        job_id=existing_job.id,
+                        run_id=existing.run_id,
+                        request_id=req.request_id,
+                        status=existing_job.status,
+                    )
+
+    run = orchestrator.create_run(
+        input_path=req.input_path,
+        config_payload=req.config,
+        request_id=req.request_id,
+    )
     job = await job_queue.enqueue(payload=req.model_dump())
     job.run_id = run.run_id
     log_event(
@@ -68,7 +84,7 @@ async def create_job(req: IngestRequest) -> IngestResponse:
         "queue.job.enqueued",
         {"job_id": job.id, "run_id": run.run_id, "input_path": req.input_path},
     )
-    return IngestResponse(job_id=job.id, run_id=run.run_id, status=job.status)
+    return IngestResponse(job_id=job.id, run_id=run.run_id, request_id=req.request_id, status=job.status)
 
 
 @app.get("/jobs/{job_id}", response_model=JobStatusResponse)
@@ -87,10 +103,12 @@ async def list_runs() -> list[PipelineRunResponse]:
         responses.append(
             PipelineRunResponse(
                 run_id=run.run_id,
+                request_id=run.request_id,
                 input_path=run.input_path,
                 created_at=run.created_at,
                 updated_at=run.updated_at,
                 status=run.status,
+                final_output_path=run.final_output_path,
                 chunks=run.chunks,
             )
         )
@@ -104,10 +122,12 @@ async def get_run(run_id: str) -> PipelineRunResponse:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
     return PipelineRunResponse(
         run_id=run.run_id,
+        request_id=run.request_id,
         input_path=run.input_path,
         created_at=run.created_at,
         updated_at=run.updated_at,
         status=run.status,
+        final_output_path=run.final_output_path,
         chunks=run.chunks,
     )
 

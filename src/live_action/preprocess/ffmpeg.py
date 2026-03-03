@@ -101,6 +101,51 @@ def extract_subclip(input_path: Path, output_path: Path, start_seconds: float, d
     _run_command(cmd)
 
 
+def concat_videos(inputs: list[Path], output_path: Path) -> None:
+    if not inputs:
+        msg = "concat_videos requires at least one input"
+        raise ValueError(msg)
+    ensure_ffmpeg()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    filelist_path = output_path.with_suffix(".concat.txt")
+    filelist_payload = "\n".join(f"file '{_escape_concat_path(path)}'" for path in inputs)
+    filelist_path.write_text(filelist_payload + "\n", encoding="utf-8")
+    cmd: list[str] = [
+        "ffmpeg",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(filelist_path),
+        "-c",
+        "copy",
+        str(output_path),
+    ]
+    _run_command(cmd)
+
+
+def remux_audio(video_path: Path, audio_path: Path, output_path: Path) -> None:
+    ensure_ffmpeg()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    cmd: list[str] = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(video_path),
+        "-i",
+        str(audio_path),
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-shortest",
+        str(output_path),
+    ]
+    _run_command(cmd)
+
+
 def _run_command(cmd: list[str], capture_output: bool = False) -> subprocess.CompletedProcess[str]:
     try:
         return subprocess.run(
@@ -117,4 +162,8 @@ def _run_command(cmd: list[str], capture_output: bool = False) -> subprocess.Com
             f"command={' '.join(cmd)} stdout={stdout.strip()} stderr={stderr.strip()}"
         )
         raise FFmpegCommandError(message) from exc
+
+
+def _escape_concat_path(path: Path) -> str:
+    return str(path).replace("'", "'\\''")
 

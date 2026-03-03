@@ -52,3 +52,6 @@ class JobQueue:
     def get(self, job_id: str) -> Job | None:
         return self._jobs.get(job_id)
 
+    def find_by_run_id(self, run_id: str) -> list[Job]:
+        return [job for job in self._jobs.values() if job.run_id == run_id]
+
