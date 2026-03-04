@@ -54,7 +54,7 @@ class TranslationConfig(BaseModel):
 class UpscaleConfig(BaseModel):
     enabled: bool = True
     model_name: str = "seedvr2"
-    model_repo_id: str = "ByteDance/SeedVR2-3B"
+    model_repo_id: str = "ByteDance-Seed/SeedVR2-3B"
     model_revision: str = "main"
     execution_mode: ExecutionMode = ExecutionMode.LOCAL
     command_template: list[str] | None = None
@@ -121,7 +121,7 @@ def build_sota_2026_profile() -> PipelineRunConfig:
             "upscale": {
                 "enabled": True,
                 "model_name": "seedvr2-3b",
-                "model_repo_id": "ByteDance/SeedVR2-3B",
+                "model_repo_id": "ByteDance-Seed/SeedVR2-3B",
                 "model_revision": "main",
                 "execution_mode": ExecutionMode.COMMAND.value,
                 "command_template": [
