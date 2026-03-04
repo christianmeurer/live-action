@@ -34,6 +34,13 @@ class ChunkingConfig(BaseModel):
 class TranslationConfig(BaseModel):
     primary_provider: ProviderName = ProviderName.WAN_DITTO
     fallback_provider: ProviderName | None = ProviderName.HUNYUAN
+    provider_model_map: dict[ProviderName, str] = Field(
+        default_factory=lambda: {
+            ProviderName.WAN_DITTO: "Wan-AI/Wan2.1-I2V-14B-720P",
+            ProviderName.HUNYUAN: "tencent/HunyuanVideo-1.5",
+        }
+    )
+    model_revision: str = "main"
     execution_mode: ExecutionMode = ExecutionMode.DRY_RUN
     command_template: list[str] | None = None
     precision: Precision = Precision.BF16
@@ -46,6 +53,8 @@ class TranslationConfig(BaseModel):
 class UpscaleConfig(BaseModel):
     enabled: bool = True
     model_name: str = "seedvr2"
+    model_repo_id: str = "ByteDance/SeedVR2-3B"
+    model_revision: str = "main"
     execution_mode: ExecutionMode = ExecutionMode.DRY_RUN
     command_template: list[str] | None = None
     target_height: int = Field(default=1080, ge=256, le=4320)

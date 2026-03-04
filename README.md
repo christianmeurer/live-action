@@ -34,12 +34,27 @@ pytest -q
 uv run uvicorn live_action.server.main:app --host 0.0.0.0 --port 8000
 ```
 
+## Environment variables
+
+- `LIVE_ACTION_API_KEY`: optional API key for protected endpoints.
+- `LIVE_ACTION_PROVISIONING__AUTO_SYNC_ON_STARTUP`: when `true`, startup performs model sync.
+- `LIVE_ACTION_PROVISIONING__HUGGINGFACE__ENABLED`: enables Hugging Face provisioning.
+- `LIVE_ACTION_PROVISIONING__HUGGINGFACE__TOKEN`: Hugging Face token for private/gated models.
+- `LIVE_ACTION_PROVISIONING__HUGGINGFACE__CACHE_DIR`: snapshot cache directory.
+- `LIVE_ACTION_PROVISIONING__HUGGINGFACE__LOCAL_DIR`: local model materialization directory.
+
 ## CLI usage
 
 Show commands:
 
 ```bash
 uv run live-action --help
+```
+
+Provisioning sync:
+
+```bash
+uv run live-action provisioning sync --force
 ```
 
 Preprocess inspect:

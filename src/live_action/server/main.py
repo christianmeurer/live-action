@@ -19,7 +19,7 @@ from live_action.server.schemas import (
     JobStatusResponse,
     PipelineRunResponse,
 )
-from live_action.server.startup import run_startup_checks
+from live_action.server.startup import run_startup_checks, run_startup_provisioning
 
 logger = logging.getLogger("live_action.server")
 config = AppConfig()
@@ -51,6 +51,8 @@ async def _worker_loop() -> None:
 async def lifespan(_: FastAPI):
     configure_logging()
     run_startup_checks(config)
+    downloaded = run_startup_provisioning(config)
+    log_event(logger, "startup.provisioning.completed", {"downloaded_models": downloaded})
     worker_task = asyncio.create_task(_worker_loop(), name="live-action-worker")
     try:
         yield

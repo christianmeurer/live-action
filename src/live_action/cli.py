@@ -10,13 +10,16 @@ from live_action.config import AppConfig
 from live_action.logging_utils import configure_logging
 from live_action.preprocess.models import AudioExtractInput, NormalizeInput, VideoInspectInput
 from live_action.preprocess.service import run_extract_audio, run_inspect, run_normalize
+from live_action.provisioning.huggingface import sync_huggingface_models
 from live_action.server.orchestrator import Orchestrator
 
 app = typer.Typer(help="live-action pipeline CLI")
 preprocess_app = typer.Typer(help="FFmpeg preprocessing commands")
 run_app = typer.Typer(help="Pipeline run commands")
+provisioning_app = typer.Typer(help="Model provisioning commands")
 app.add_typer(preprocess_app, name="preprocess")
 app.add_typer(run_app, name="run")
+app.add_typer(provisioning_app, name="provisioning")
 
 
 @app.callback()
@@ -58,6 +61,14 @@ def preprocess_extract_audio(input: Path, output_wav: Path) -> None:
     params = AudioExtractInput(input=input, output_wav=output_wav)
     result = run_extract_audio(params.input, params.output_wav)
     typer.echo(f"extract-audio completed: {result.output_path} ({result.elapsed_ms} ms)")
+
+
+@provisioning_app.command("sync")
+def provisioning_sync(force: bool = False) -> None:
+    config = AppConfig()
+    result = sync_huggingface_models(config, force=force)
+    downloaded = sum(1 for record in result.records if record.downloaded)
+    typer.echo(f"provisioning completed: total={len(result.records)} downloaded={downloaded}")
 
 
 if __name__ == "__main__":
