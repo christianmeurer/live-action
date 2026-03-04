@@ -79,6 +79,8 @@ class Orchestrator:
 
         metadata = inspect_video(Path(input_path))
         duration = float(metadata.get("format", {}).get("duration", 0.0))
+        if duration <= 0.0:
+            raise ValueError(f"Input video duration must be > 0 seconds: {input_path}")
         chunks = build_chunk_plan(
             total_seconds=duration,
             chunk_seconds=run_config.chunking.chunk_seconds,

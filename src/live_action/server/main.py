@@ -14,6 +14,7 @@ from live_action.server.auth import require_api_key
 from live_action.server.orchestrator import Orchestrator
 from live_action.server.queue import JobQueue
 from live_action.server.schemas import (
+    ChunkStatusResponse,
     IngestRequest,
     IngestResponse,
     JobStatusResponse,
@@ -133,7 +134,7 @@ async def list_runs(_: ApiKeyDep) -> list[PipelineRunResponse]:
                 updated_at=run.updated_at,
                 status=run.status,
                 final_output_path=run.final_output_path,
-                chunks=run.chunks,
+                chunks=[_to_chunk_status_response(chunk) for chunk in run.chunks],
             )
         )
     return responses
@@ -152,6 +153,10 @@ async def get_run(run_id: str, _: ApiKeyDep) -> PipelineRunResponse:
         updated_at=run.updated_at,
         status=run.status,
         final_output_path=run.final_output_path,
-        chunks=run.chunks,
+        chunks=[_to_chunk_status_response(chunk) for chunk in run.chunks],
     )
+
+
+def _to_chunk_status_response(chunk: object) -> ChunkStatusResponse:
+    return ChunkStatusResponse.model_validate(chunk, from_attributes=True)
 

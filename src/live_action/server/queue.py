@@ -42,10 +42,15 @@ class JobQueue:
         return job
 
     def complete(self, job_id: str) -> None:
-        self._jobs[job_id].status = JobStatus.SUCCEEDED
+        job = self._jobs.get(job_id)
+        if job is None:
+            raise ValueError(f"Unknown job_id: {job_id}")
+        job.status = JobStatus.SUCCEEDED
 
     def fail(self, job_id: str, error: str) -> None:
-        job = self._jobs[job_id]
+        job = self._jobs.get(job_id)
+        if job is None:
+            raise ValueError(f"Unknown job_id: {job_id}")
         job.status = JobStatus.FAILED
         job.error = error
 
