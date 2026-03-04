@@ -199,3 +199,98 @@ Health check endpoint:
 GET /health
 ```
 
+## Ubuntu VM runbook (objective)
+
+### 1) VM prerequisites
+
+- Ubuntu 22.04+ with sudo access
+- NVIDIA driver and CUDA runtime installed if using GPU paths
+- `ffmpeg` and `ffprobe` available on `PATH`
+- Python 3.11
+- `git`
+
+Install baseline packages:
+
+```bash
+sudo apt update
+sudo apt install -y git ffmpeg python3.11 python3.11-venv curl
+```
+
+Install `uv`:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### 2) Clone and bootstrap
+
+```bash
+git clone <YOUR_REPO_URL> live-action
+cd live-action
+uv sync --extra dev
+```
+
+### 3) Preflight verification
+
+```bash
+ffmpeg -version
+ffprobe -version
+uv run pytest -q
+uv run live-action --help
+```
+
+Expected test status: all tests pass.
+
+### 4) Generate SOTA profile
+
+```bash
+mkdir -p ./config
+uv run live-action profiles sota-2026 ./config/sota-2026.json
+```
+
+### 5) Start API service
+
+```bash
+export LIVE_ACTION_API_KEY="change-me"
+export LIVE_ACTION_PROVISIONING__HUGGINGFACE__ENABLED=true
+export LIVE_ACTION_PROVISIONING__HUGGINGFACE__TOKEN="<hf_token_if_needed>"
+uv run uvicorn live_action.server.main:app --host 0.0.0.0 --port 8000
+```
+
+### 6) Validate service from VM
+
+```bash
+curl http://127.0.0.1:8000/health
+curl -H "x-api-key: $LIVE_ACTION_API_KEY" http://127.0.0.1:8000/metrics
+```
+
+### 7) Run one pipeline job
+
+```bash
+uv run live-action run single --input ./input/sample.mp4 --config-json ./config/sota-2026.json
+```
+
+Outputs are written under `./outputs` and run reports under `./artifacts/runs`.
+
+## Ubuntu startup script
+
+Use [`scripts/start_live_action_vm.sh`](scripts/start_live_action_vm.sh:1) for bootstrap + service startup on Ubuntu.
+
+Example:
+
+```bash
+chmod +x ./scripts/start_live_action_vm.sh
+./scripts/start_live_action_vm.sh --repo-url <YOUR_REPO_URL> --repo-dir /opt/live-action --host 0.0.0.0 --port 8000
+```
+
+## Optional systemd service
+
+Use template [`scripts/live-action.service`](scripts/live-action.service:1):
+
+```bash
+sudo cp ./scripts/live-action.service /etc/systemd/system/live-action.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now live-action
+sudo systemctl status live-action
+```
+
