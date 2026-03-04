@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from live_action.adapters.command import render_command, run_command
+from live_action.adapters.local_video import upscale_video_local
 from live_action.pipeline.config import ExecutionMode, PipelineRunConfig
 
 
@@ -40,6 +41,12 @@ class UpscaleService:
                 },
             )
             run_command(command, stage="upscale")
+        elif run_config.upscale.execution_mode == ExecutionMode.LOCAL:
+            upscale_video_local(
+                input_path=input_path,
+                output_path=output_path,
+                target_height=run_config.upscale.target_height,
+            )
         else:
             shutil.copy2(input_path, output_path)
 

@@ -147,6 +147,25 @@ Example (`run.json`):
 }
 ```
 
+## Turnkey local execution mode
+
+Default runtime execution mode is `local` for both translation and upscale. This mode uses built-in FFmpeg-based local adapters in [`translate_video_local()`](src/live_action/adapters/local_video.py:13) and [`upscale_video_local()`](src/live_action/adapters/local_video.py:58), so the service runs end-to-end without external command templates.
+
+Use this with:
+
+```json
+{
+  "translation": {
+    "execution_mode": "local"
+  },
+  "upscale": {
+    "enabled": true,
+    "execution_mode": "local",
+    "target_height": 1080
+  }
+}
+```
+
 ## Docker
 
 Build and run:

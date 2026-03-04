@@ -18,6 +18,7 @@ class ProviderName(StrEnum):
 class ExecutionMode(StrEnum):
     DRY_RUN = "dry-run"
     COMMAND = "command"
+    LOCAL = "local"
 
 
 class RetryPolicy(BaseModel):
@@ -41,7 +42,7 @@ class TranslationConfig(BaseModel):
         }
     )
     model_revision: str = "main"
-    execution_mode: ExecutionMode = ExecutionMode.DRY_RUN
+    execution_mode: ExecutionMode = ExecutionMode.LOCAL
     command_template: list[str] | None = None
     precision: Precision = Precision.BF16
     denoise_strength: float = Field(default=0.8, ge=0.0, le=1.0)
@@ -55,7 +56,7 @@ class UpscaleConfig(BaseModel):
     model_name: str = "seedvr2"
     model_repo_id: str = "ByteDance/SeedVR2-3B"
     model_revision: str = "main"
-    execution_mode: ExecutionMode = ExecutionMode.DRY_RUN
+    execution_mode: ExecutionMode = ExecutionMode.LOCAL
     command_template: list[str] | None = None
     target_height: int = Field(default=1080, ge=256, le=4320)
 

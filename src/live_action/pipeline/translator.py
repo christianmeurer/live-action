@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from live_action.adapters.command import render_command, run_command
+from live_action.adapters.local_video import translate_video_local
 from live_action.pipeline.config import ExecutionMode, PipelineRunConfig, ProviderName
 
 
@@ -100,6 +101,40 @@ class PassthroughProvider(TranslationProvider):
         return TranslationResult(provider_used=self.name, output_path=output_path, metadata_path=metadata_path)
 
 
+class LocalProvider(TranslationProvider):
+    def __init__(self, provider_name: ProviderName) -> None:
+        self.name = provider_name
+
+    def translate_chunk(
+        self,
+        *,
+        input_path: Path,
+        output_path: Path,
+        run_config: PipelineRunConfig,
+        chunk_index: int,
+    ) -> TranslationResult:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        translate_video_local(
+            input_path=input_path,
+            output_path=output_path,
+            denoise_strength=run_config.translation.denoise_strength,
+            guidance_scale=run_config.translation.guidance_scale,
+            seed=run_config.translation.seed,
+        )
+        metadata_path = output_path.with_suffix(".translation.json")
+        metadata = {
+            "provider": self.name.value,
+            "chunk_index": chunk_index,
+            "execution_mode": ExecutionMode.LOCAL.value,
+            "precision": run_config.translation.precision.value,
+            "guidance_scale": run_config.translation.guidance_scale,
+            "denoise_strength": run_config.translation.denoise_strength,
+            "seed": run_config.translation.seed,
+        }
+        metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+        return TranslationResult(provider_used=self.name, output_path=output_path, metadata_path=metadata_path)
+
+
 class TranslationService:
     def __init__(self) -> None:
         self._providers: dict[ProviderName, TranslationProvider] = {
@@ -113,6 +148,8 @@ class TranslationService:
                 msg = "translation.command_template must be provided for command execution mode"
                 raise ValueError(msg)
             return CommandTemplateProvider(provider, run_config.translation.command_template)
+        if run_config.translation.execution_mode == ExecutionMode.LOCAL:
+            return LocalProvider(provider)
         return self._providers[provider]
 
     def translate_chunk(

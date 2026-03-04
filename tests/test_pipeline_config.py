@@ -5,6 +5,12 @@ import pytest
 from live_action.pipeline.config import ExecutionMode, PipelineRunConfig
 
 
+def test_pipeline_config_defaults_to_local_execution_mode() -> None:
+    cfg = PipelineRunConfig()
+    assert cfg.translation.execution_mode == ExecutionMode.LOCAL
+    assert cfg.upscale.execution_mode == ExecutionMode.LOCAL
+
+
 def test_pipeline_config_requires_translation_command_template() -> None:
     with pytest.raises(ValueError):
         PipelineRunConfig.model_validate(
