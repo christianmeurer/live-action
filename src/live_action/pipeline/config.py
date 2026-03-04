@@ -101,7 +101,7 @@ def build_sota_2026_profile() -> PipelineRunConfig:
                 "model_revision": "main",
                 "execution_mode": ExecutionMode.COMMAND.value,
                 "command_template": [
-                    "python",
+                    "python3",
                     "scripts/sota_translate.py",
                     "--input",
                     "{input}",
@@ -125,7 +125,7 @@ def build_sota_2026_profile() -> PipelineRunConfig:
                 "model_revision": "main",
                 "execution_mode": ExecutionMode.COMMAND.value,
                 "command_template": [
-                    "python",
+                    "python3",
                     "scripts/sota_upscale.py",
                     "--input",
                     "{input}",
