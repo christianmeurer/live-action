@@ -272,6 +272,21 @@ uv run live-action run single --input ./input/sample.mp4 --config-json ./config/
 
 Outputs are written under `./outputs` and run reports under `./artifacts/runs`.
 
+## Progress persistence and resume behavior
+
+Runs are already chunked and persisted per run report in `./artifacts/runs/<run_id>/run-report.json`.
+
+Resume behavior now skips completed chunks when:
+
+- chunk status is `succeeded`
+- chunk output file still exists on disk
+
+Operational recommendation:
+
+- keep `./artifacts/runs` and `./outputs` on persistent volume
+- if VM restarts, submit the same `request_id` so existing run is reused
+- restart service and continue processing from remaining chunks
+
 ## Ubuntu startup script
 
 Use [`scripts/start_live_action_vm.sh`](scripts/start_live_action_vm.sh:1) for bootstrap + service startup on Ubuntu.

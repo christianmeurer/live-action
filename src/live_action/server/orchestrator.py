@@ -140,6 +140,8 @@ class Orchestrator:
             audio_path = Path()
 
         for chunk in run.chunks:
+            if self._chunk_is_complete(chunk):
+                continue
             await self._process_chunk(run, chunk, run_config)
 
         if any(chunk.status != "succeeded" for chunk in run.chunks):
@@ -241,6 +243,14 @@ class Orchestrator:
     def _write_run_report(self, run: PipelineRunRecord) -> None:
         payload = self._serialize_run(run)
         self._store.save_json(f"runs/{run.run_id}/run-report.json", payload)
+
+    @staticmethod
+    def _chunk_is_complete(chunk: ChunkRunRecord) -> bool:
+        if chunk.status != "succeeded":
+            return False
+        if chunk.upscaled_path is None:
+            return False
+        return Path(chunk.upscaled_path).exists()
 
     def _load_existing_runs(self) -> None:
         report_files = self._store.glob("runs/*/run-report.json")
