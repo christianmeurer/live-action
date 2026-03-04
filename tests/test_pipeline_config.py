@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from live_action.pipeline.config import ExecutionMode, PipelineRunConfig
+from live_action.pipeline.config import ExecutionMode, PipelineRunConfig, build_sota_2026_profile
 
 
 def test_pipeline_config_defaults_to_local_execution_mode() -> None:
@@ -35,6 +35,14 @@ def test_pipeline_config_accepts_command_templates() -> None:
             },
         }
     )
+    assert cfg.translation.command_template is not None
+    assert cfg.upscale.command_template is not None
+
+
+def test_build_sota_2026_profile_uses_command_mode() -> None:
+    cfg = build_sota_2026_profile()
+    assert cfg.translation.execution_mode == ExecutionMode.COMMAND
+    assert cfg.upscale.execution_mode == ExecutionMode.COMMAND
     assert cfg.translation.command_template is not None
     assert cfg.upscale.command_template is not None
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
@@ -34,4 +36,15 @@ def test_cli_provisioning_sync_reports_download_count(monkeypatch: pytest.Monkey
 
     assert result.exit_code == 0
     assert "provisioning completed: total=2 downloaded=1" in result.stdout
+
+
+def test_cli_profiles_sota_2026_writes_json(tmp_path: Path) -> None:
+    runner = CliRunner()
+    output_path = tmp_path / "sota.json"
+    result = runner.invoke(app, ["profiles", "sota-2026", str(output_path)])
+
+    assert result.exit_code == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["translation"]["execution_mode"] == "command"
+    assert payload["upscale"]["execution_mode"] == "command"
 

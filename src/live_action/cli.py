@@ -8,6 +8,7 @@ import typer
 
 from live_action.config import AppConfig
 from live_action.logging_utils import configure_logging
+from live_action.pipeline.config import build_sota_2026_profile
 from live_action.preprocess.models import AudioExtractInput, NormalizeInput, VideoInspectInput
 from live_action.preprocess.service import run_extract_audio, run_inspect, run_normalize
 from live_action.provisioning.huggingface import sync_huggingface_models
@@ -17,9 +18,11 @@ app = typer.Typer(help="live-action pipeline CLI")
 preprocess_app = typer.Typer(help="FFmpeg preprocessing commands")
 run_app = typer.Typer(help="Pipeline run commands")
 provisioning_app = typer.Typer(help="Model provisioning commands")
+profiles_app = typer.Typer(help="Profile generation commands")
 app.add_typer(preprocess_app, name="preprocess")
 app.add_typer(run_app, name="run")
 app.add_typer(provisioning_app, name="provisioning")
+app.add_typer(profiles_app, name="profiles")
 
 
 @app.callback()
@@ -69,6 +72,14 @@ def provisioning_sync(force: bool = False) -> None:
     result = sync_huggingface_models(config, force=force)
     downloaded = sum(1 for record in result.records if record.downloaded)
     typer.echo(f"provisioning completed: total={len(result.records)} downloaded={downloaded}")
+
+
+@profiles_app.command("sota-2026")
+def profiles_sota_2026(output_json: Path) -> None:
+    profile = build_sota_2026_profile().model_dump(mode="json")
+    output_json.parent.mkdir(parents=True, exist_ok=True)
+    output_json.write_text(json.dumps(profile, indent=2), encoding="utf-8")
+    typer.echo(f"sota profile written: {output_json}")
 
 
 if __name__ == "__main__":

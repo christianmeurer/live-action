@@ -166,6 +166,25 @@ Use this with:
 }
 ```
 
+## SOTA-2026 production command profile
+
+Generate canonical command-mode profile:
+
+```bash
+uv run live-action profiles sota-2026 ./config/sota-2026.json
+```
+
+This emits a production-oriented command profile using:
+
+- Translation adapter entrypoint: [`scripts/sota_translate.py`](scripts/sota_translate.py:1)
+- Upscale adapter entrypoint: [`scripts/sota_upscale.py`](scripts/sota_upscale.py:1)
+
+Run with the generated config:
+
+```bash
+uv run live-action run single --input ./input/sample.mp4 --config-json ./config/sota-2026.json
+```
+
 ## Docker
 
 Build and run:

@@ -87,3 +87,62 @@ class PipelineRunConfig(BaseModel):
             raise ValueError("upscale.command_template is required when execution_mode=command")
         return self
 
+
+def build_sota_2026_profile() -> PipelineRunConfig:
+    return PipelineRunConfig.model_validate(
+        {
+            "translation": {
+                "primary_provider": ProviderName.WAN_DITTO.value,
+                "fallback_provider": ProviderName.HUNYUAN.value,
+                "provider_model_map": {
+                    ProviderName.WAN_DITTO.value: "Wan-AI/Wan2.1-I2V-14B-720P",
+                    ProviderName.HUNYUAN.value: "tencent/HunyuanVideo-1.5",
+                },
+                "model_revision": "main",
+                "execution_mode": ExecutionMode.COMMAND.value,
+                "command_template": [
+                    "python",
+                    "scripts/sota_translate.py",
+                    "--input",
+                    "{input}",
+                    "--output",
+                    "{output}",
+                    "--provider",
+                    "{provider}",
+                    "--seed",
+                    "{seed}",
+                    "--guidance",
+                    "{guidance}",
+                    "--denoise",
+                    "{denoise}",
+                ],
+                "precision": Precision.BF16.value,
+            },
+            "upscale": {
+                "enabled": True,
+                "model_name": "seedvr2-3b",
+                "model_repo_id": "ByteDance/SeedVR2-3B",
+                "model_revision": "main",
+                "execution_mode": ExecutionMode.COMMAND.value,
+                "command_template": [
+                    "python",
+                    "scripts/sota_upscale.py",
+                    "--input",
+                    "{input}",
+                    "--output",
+                    "{output}",
+                    "--height",
+                    "{target_height}",
+                    "--model",
+                    "{model}",
+                ],
+                "target_height": 1080,
+            },
+            "evaluation": {
+                "enabled": True,
+                "backend": "clip",
+                "structural_similarity_threshold": 0.9,
+            },
+        }
+    )
+
